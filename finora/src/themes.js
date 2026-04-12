@@ -141,4 +141,4 @@ export const THEMES = {
   }
 }
 
-export const DEFAULT_THEME = 'soft-cream'
+export const DEFAULT_THEME = 'forest'

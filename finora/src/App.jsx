@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore, useThemeStore, useTransactionStore } from './store'
-import { supabase, fetchTransactions } from './lib/supabase'
+import { useAuthStore, useThemeStore, useTransactionStore, useProfileStore } from './store'
+import { supabase, fetchTransactions, fetchUserProfile } from './lib/supabase'
+import { registerServiceWorker } from './lib/notifications'
 import Sidebar from './components/Sidebar'
 import { SplashScreen, OnboardingScreen } from './pages/Splash'
 import LoginScreen from './pages/Login'
@@ -32,44 +33,39 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { setUser, setSession, user } = useAuthStore()
+  const { setUser, setSession } = useAuthStore()
   const { theme } = useThemeStore()
   const { setTransactions } = useTransactionStore()
+  const { setProfile } = useProfileStore()
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-color', theme.accent)
+    registerServiceWorker()
   }, [theme])
 
   useEffect(() => {
-    // Restore session on app load
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        setSession(session)
-        restoreData(session.user.id)
-      }
+      if (session?.user) { setUser(session.user); setSession(session); restoreData(session.user.id) }
     })
-
-    // Listen for auth changes (login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        setSession(session)
-        restoreData(session.user.id)
-      } else {
-        setUser(null)
-        setSession(null)
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) { setUser(session.user); setSession(session); restoreData(session.user.id) }
+      else { setUser(null); setSession(null) }
     })
     return () => subscription.unsubscribe()
   }, [])
 
   async function restoreData(userId) {
-    // Pull all transactions from Supabase on login — data always restored
-    const { data } = await fetchTransactions(userId)
-    if (data && data.length > 0) {
-      setTransactions(data)
-    }
+    const { data: txns } = await fetchTransactions(userId)
+    if (txns?.length) setTransactions(txns)
+    const { data: profile } = await fetchUserProfile(userId)
+    if (profile) setProfile({
+      city: profile.city || '',
+      budget: profile.monthly_budget || 0,
+      cityGoldPremium: profile.city_gold_premium || 40,
+      lifeStage: profile.life_stage || '',
+      goal: profile.goal || '',
+      profession: profile.profession || '',
+    })
   }
 
   return (

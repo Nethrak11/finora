@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { THEMES, DEFAULT_THEME } from '../themes'
+import { THEMES } from '../themes'
+
+const DEFAULT_THEME = 'forest'
 
 export const useThemeStore = create(persist(
   (set, get) => ({
@@ -17,9 +19,11 @@ export const useAuthStore = create(persist(
   (set) => ({
     user: null,
     session: null,
+    profile: null,
     setUser: (user) => set({ user }),
     setSession: (session) => set({ session }),
-    logout: () => set({ user: null, session: null })
+    setProfile: (profile) => set({ profile }),
+    logout: () => set({ user: null, session: null, profile: null })
   }),
   { name: 'finora-auth' }
 ))
@@ -27,7 +31,6 @@ export const useAuthStore = create(persist(
 export const useTransactionStore = create(persist(
   (set, get) => ({
     transactions: [],
-    loading: false,
     setTransactions: (txns) => set({ transactions: txns }),
     addTransaction: (txn) => set((s) => ({
       transactions: [{ ...txn, id: Date.now().toString(), created_at: new Date().toISOString() }, ...s.transactions]
@@ -39,18 +42,13 @@ export const useTransactionStore = create(persist(
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
       })
     },
-    getTotalSpent: () => {
-      const month = get().getMonthTransactions()
-      return month.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
-    },
-    getTotalIncome: () => {
-      const month = get().getMonthTransactions()
-      return month.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
-    },
+    getTotalSpent: () => get().getMonthTransactions().filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0),
+    getTotalIncome: () => get().getMonthTransactions().filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0),
     getCategoryBreakdown: () => {
-      const month = get().getMonthTransactions().filter(t => t.type === 'expense')
       const map = {}
-      month.forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount })
+      get().getMonthTransactions().filter(t => t.type === 'expense').forEach(t => {
+        map[t.category] = (map[t.category] || 0) + Number(t.amount)
+      })
       return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     }
   }),
@@ -61,10 +59,7 @@ export const useMarketStore = create((set, get) => ({
   data: null,
   lastFetched: null,
   setData: (data) => set({ data, lastFetched: Date.now() }),
-  isStale: () => {
-    const { lastFetched } = get()
-    return !lastFetched || Date.now() - lastFetched > 15 * 60 * 1000
-  }
+  isStale: () => !get().lastFetched || Date.now() - get().lastFetched > 15 * 60 * 1000
 }))
 
 export const useChatStore = create((set) => ({
@@ -74,3 +69,23 @@ export const useChatStore = create((set) => ({
   setLoading: (v) => set({ loading: v }),
   clearChat: () => set({ messages: [] })
 }))
+
+export const useProfileStore = create(persist(
+  (set) => ({
+    city: '',
+    budget: 0,
+    cityGoldPremium: 40,
+    lifeStage: '',
+    goal: '',
+    profession: '',
+    customCategories: [],
+    setProfile: (data) => set(data),
+    addCustomCategory: (cat) => set((s) => ({
+      customCategories: [...s.customCategories.filter(c => c !== cat), cat]
+    })),
+    removeCustomCategory: (cat) => set((s) => ({
+      customCategories: s.customCategories.filter(c => c !== cat)
+    }))
+  }),
+  { name: 'finora-profile' }
+))

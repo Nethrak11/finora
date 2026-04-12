@@ -128,3 +128,18 @@ CREATE TRIGGER on_auth_user_created
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS life_stage TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS income_range TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS goal TEXT;
+
+-- ADDITIONAL COLUMNS FOR V3 (run if you already ran previous SQL)
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Mumbai';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS gold_premium NUMERIC DEFAULT 60;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS life_stage TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS income_range TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS goal TEXT;
+
+-- V2 ADDITIONS — run these if you already ran the first block
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS city_gold_premium INTEGER DEFAULT 40;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS life_stage TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS income_range TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS goal TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profession TEXT;
