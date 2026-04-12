@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard'
 import AIChat from './pages/AIChat'
 import Analytics from './pages/Analytics'
 import AddTransaction from './pages/AddTransaction'
+import TransactionHistory from './pages/TransactionHistory'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import AboutUs from './pages/AboutUs'
@@ -58,14 +59,19 @@ export default function App() {
     const { data: txns } = await fetchTransactions(userId)
     if (txns?.length) setTransactions(txns)
     const { data: profile } = await fetchUserProfile(userId)
-    if (profile) setProfile({
-      city: profile.city || '',
-      budget: profile.monthly_budget || 0,
-      cityGoldPremium: profile.city_gold_premium || 40,
-      lifeStage: profile.life_stage || '',
-      goal: profile.goal || '',
-      profession: profile.profession || '',
-    })
+    if (profile) {
+      setProfile({
+        city: profile.city || '',
+        budget: profile.monthly_budget || 0,
+        cityGoldPremium: profile.city_gold_premium || 40,
+        lifeStage: profile.life_stage || '',
+        goal: profile.goal || '',
+        profession: profile.profession || '',
+        phone: profile.phone || '',
+        whatsapp: profile.whatsapp_number || '',
+        name: profile.name || '',
+      })
+    }
   }
 
   return (
@@ -80,6 +86,7 @@ export default function App() {
         <Route path="/chat" element={<ProtectedRoute><AppShell><AIChat /></AppShell></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AppShell><Analytics /></AppShell></ProtectedRoute>} />
         <Route path="/add" element={<ProtectedRoute><AppShell><AddTransaction /></AppShell></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><AppShell><TransactionHistory /></AppShell></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppShell><Profile /></AppShell></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppShell><Settings /></AppShell></ProtectedRoute>} />
         <Route path="/about" element={<ProtectedRoute><AppShell><AboutUs /></AppShell></ProtectedRoute>} />

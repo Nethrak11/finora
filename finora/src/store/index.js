@@ -5,25 +5,20 @@ import { THEMES } from '../themes'
 const DEFAULT_THEME = 'forest'
 
 export const useThemeStore = create(persist(
-  (set, get) => ({
+  (set) => ({
     themeKey: DEFAULT_THEME,
     theme: THEMES[DEFAULT_THEME],
-    setTheme: (key) => {
-      if (THEMES[key]) set({ themeKey: key, theme: THEMES[key] })
-    }
+    setTheme: (key) => { if (THEMES[key]) set({ themeKey: key, theme: THEMES[key] }) }
   }),
   { name: 'finora-theme' }
 ))
 
 export const useAuthStore = create(persist(
   (set) => ({
-    user: null,
-    session: null,
-    profile: null,
+    user: null, session: null,
     setUser: (user) => set({ user }),
     setSession: (session) => set({ session }),
-    setProfile: (profile) => set({ profile }),
-    logout: () => set({ user: null, session: null, profile: null })
+    logout: () => set({ user: null, session: null })
   }),
   { name: 'finora-auth' }
 ))
@@ -33,7 +28,13 @@ export const useTransactionStore = create(persist(
     transactions: [],
     setTransactions: (txns) => set({ transactions: txns }),
     addTransaction: (txn) => set((s) => ({
-      transactions: [{ ...txn, id: Date.now().toString(), created_at: new Date().toISOString() }, ...s.transactions]
+      transactions: [{ ...txn, id: txn.id || Date.now().toString(), created_at: new Date().toISOString() }, ...s.transactions]
+    })),
+    updateTransaction: (id, updates) => set((s) => ({
+      transactions: s.transactions.map(t => t.id === id ? { ...t, ...updates } : t)
+    })),
+    deleteTransaction: (id) => set((s) => ({
+      transactions: s.transactions.filter(t => t.id !== id)
     })),
     getMonthTransactions: () => {
       const now = new Date()
@@ -56,15 +57,13 @@ export const useTransactionStore = create(persist(
 ))
 
 export const useMarketStore = create((set, get) => ({
-  data: null,
-  lastFetched: null,
+  data: null, lastFetched: null,
   setData: (data) => set({ data, lastFetched: Date.now() }),
-  isStale: () => !get().lastFetched || Date.now() - get().lastFetched > 15 * 60 * 1000
+  isStale: () => !get().lastFetched || Date.now() - get().lastFetched > 5 * 60 * 1000 // 5 min for market data
 }))
 
 export const useChatStore = create((set) => ({
-  messages: [],
-  loading: false,
+  messages: [], loading: false,
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
   setLoading: (v) => set({ loading: v }),
   clearChat: () => set({ messages: [] })
@@ -73,13 +72,16 @@ export const useChatStore = create((set) => ({
 export const useProfileStore = create(persist(
   (set) => ({
     city: '',
-    budget: 0,
+    budget: 0,  // NO default — user must set this
     cityGoldPremium: 40,
     lifeStage: '',
     goal: '',
     profession: '',
+    phone: '',
+    whatsapp: '',
+    name: '',
     customCategories: [],
-    setProfile: (data) => set(data),
+    setProfile: (data) => set((s) => ({ ...s, ...data })),
     addCustomCategory: (cat) => set((s) => ({
       customCategories: [...s.customCategories.filter(c => c !== cat), cat]
     })),
