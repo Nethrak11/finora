@@ -3,50 +3,57 @@ import { useNavigate } from 'react-router-dom'
 import { useThemeStore, useAuthStore, useProfileStore } from '../store'
 import { signOut, upsertUserProfile } from '../lib/supabase'
 
+const LIFE_STAGES = ['Student', 'Young Professional', 'Family', 'Pre-retirement']
+const GOALS = ['Save more money', 'Track spending', 'Invest wisely', 'Get debt-free']
+const PROFESSIONS = ['Student', 'Salaried Employee', 'Business Owner', 'Freelancer']
+
 export default function Profile() {
   const { theme } = useThemeStore()
   const { user, logout } = useAuthStore()
-  const { city, budget, lifeStage, goal, phone, whatsapp, name: storedName, setProfile } = useProfileStore()
+  const profile = useProfileStore()
+  const { setProfile } = useProfileStore()
   const navigate = useNavigate()
 
-  const [name, setName] = useState(storedName || user?.user_metadata?.full_name || '')
-  const [phoneVal, setPhoneVal] = useState(phone || '')
-  const [waVal, setWaVal] = useState(whatsapp || '')
-  const [budgetVal, setBudgetVal] = useState(budget > 0 ? String(budget) : '')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [waNum, setWaNum] = useState('')
+  const [budget, setBudget] = useState('')
+  const [lifeStage, setLifeStage] = useState('')
+  const [goal, setGoal] = useState('')
+  const [profession, setProfession] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Sync from store when component mounts
+  // Load from store on mount
   useEffect(() => {
-    setName(storedName || user?.user_metadata?.full_name || '')
-    setPhoneVal(phone || '')
-    setWaVal(whatsapp || '')
-    setBudgetVal(budget > 0 ? String(budget) : '')
-  }, [storedName, phone, whatsapp, budget])
+    setName(profile.name || user?.user_metadata?.full_name || '')
+    setPhone(profile.phone || '')
+    setWaNum(profile.whatsapp || '')
+    setBudget(profile.budget > 0 ? String(profile.budget) : '')
+    setLifeStage(profile.lifeStage || '')
+    setGoal(profile.goal || '')
+    setProfession(profile.profession || '')
+  }, [])
 
   const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'
 
   const handleSave = async () => {
     setSaving(true)
-    const budgetNum = budgetVal ? parseFloat(budgetVal) : 0
+    const budgetNum = budget ? parseFloat(budget) : 0
 
-    // Update local store immediately
+    // Update Zustand store immediately so home screen reflects changes
     setProfile({
-      name,
-      phone: phoneVal,
-      whatsapp: waVal,
-      budget: budgetNum,
+      name, phone, whatsapp: waNum, budget: budgetNum,
+      lifeStage, goal, profession
     })
 
-    // Sync to Supabase
     if (user?.id && user.id !== 'demo') {
       await upsertUserProfile({
-        id: user.id,
-        email: user.email,
-        name,
-        phone: phoneVal,
-        whatsapp_number: waVal,
+        id: user.id, email: user.email,
+        name, phone, whatsapp_number: waNum,
         monthly_budget: budgetNum,
+        life_stage: lifeStage,
+        goal, profession
       })
     }
     setSaving(false)
@@ -61,11 +68,21 @@ export default function Profile() {
   }
 
   const inp = {
-    width: '100%', padding: '13px 16px', background: theme.inputBg,
+    width: '100%', padding: '12px 14px', background: theme.inputBg,
     border: `1.5px solid ${theme.border}`, borderRadius: 12, fontSize: 14,
     color: theme.text, marginBottom: 12, outline: 'none',
     WebkitAppearance: 'none', boxSizing: 'border-box', display: 'block'
   }
+
+  const selStyle = {
+    ...inp, cursor: 'pointer'
+  }
+
+  const SL = ({ children }) => (
+    <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, letterSpacing: '.07em', margin: '14px 0 8px' }}>
+      {children}
+    </div>
+  )
 
   return (
     <div className="screen-enter" style={{ background: theme.bg, minHeight: '100%', paddingBottom: 32 }}>
@@ -77,60 +94,70 @@ export default function Profile() {
         </div>
         <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>{name || 'Your name'}</div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>{user?.email || ''}</div>
-        {city && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{city}</div>}
+        {profile.city && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>📍 {profile.city}</div>}
       </div>
 
       <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, letterSpacing: '.07em', marginBottom: 8 }}>PERSONAL INFO</div>
-
+        <SL>PERSONAL INFO</SL>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" style={inp} />
-        <input value={user?.email || ''} disabled placeholder="Email"
-          style={{ ...inp, opacity: 0.5, cursor: 'not-allowed' }} />
-        <input value={phoneVal} onChange={e => setPhoneVal(e.target.value)}
-          placeholder="Phone number" type="tel" style={inp} />
-        <input value={waVal} onChange={e => setWaVal(e.target.value)}
-          placeholder="WhatsApp number (for digest)" type="tel" style={inp} />
+        <input value={user?.email || ''} disabled style={{ ...inp, opacity: 0.45, cursor: 'not-allowed' }} />
+        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" type="tel" style={inp} />
+        <input value={waNum} onChange={e => setWaNum(e.target.value)} placeholder="WhatsApp number" type="tel" style={inp} />
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, letterSpacing: '.07em', margin: '4px 0 8px' }}>
-          MONTHLY BUDGET (₹)
-        </div>
-        <input value={budgetVal} onChange={e => setBudgetVal(e.target.value.replace(/\D/g, ''))}
+        <SL>MONTHLY BUDGET (₹) — how much you plan to spend</SL>
+        <input value={budget} onChange={e => setBudget(e.target.value.replace(/\D/g, ''))}
           placeholder="e.g. 25000" type="tel" style={inp} />
-        {budgetVal && <div style={{ fontSize: 11, color: theme.textMuted, marginTop: -8, marginBottom: 12 }}>
-          ₹{parseInt(budgetVal||0).toLocaleString('en-IN')} per month
+        {budget && <div style={{ fontSize: 11, color: theme.textMuted, marginTop: -8, marginBottom: 12 }}>
+          ₹{parseInt(budget || 0).toLocaleString('en-IN')} per month spending limit
         </div>}
 
-        {city && (
+        <SL>LIFE STAGE</SL>
+        <select value={lifeStage} onChange={e => setLifeStage(e.target.value)} style={selStyle}>
+          <option value="">Select life stage...</option>
+          {LIFE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <SL>FINANCIAL GOAL</SL>
+        <select value={goal} onChange={e => setGoal(e.target.value)} style={selStyle}>
+          <option value="">Select your goal...</option>
+          {GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+
+        <SL>PROFESSION</SL>
+        <select value={profession} onChange={e => setProfession(e.target.value)} style={selStyle}>
+          <option value="">Select profession...</option>
+          {PROFESSIONS.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+
+        {profile.city && (
           <div style={{ background: theme.aiBg, border: `1px solid ${theme.aiBorder}`, borderRadius: 10,
-            padding: '10px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: theme.aiText }}>📍 {city} — your city</span>
+            padding: '10px 14px', margin: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: theme.aiText }}>📍 City: {profile.city}</span>
             <button onClick={() => navigate('/onboarding-questions')} style={{
               background: 'none', border: 'none', color: theme.accent, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-              Change
+              Change city
             </button>
           </div>
         )}
 
         <button onClick={handleSave} disabled={saving} style={{
           width: '100%', padding: 14, background: theme.accent, color: '#fff',
-          border: 'none', borderRadius: 13, fontSize: 14, fontWeight: 800, cursor: 'pointer', marginBottom: 16,
-          opacity: saving ? 0.6 : 1
+          border: 'none', borderRadius: 13, fontSize: 14, fontWeight: 800, cursor: 'pointer',
+          marginTop: 8, marginBottom: 16, opacity: saving ? 0.6 : 1
         }}>
           {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save changes'}
         </button>
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, letterSpacing: '.07em', marginBottom: 8 }}>ACCOUNT</div>
+        <SL>ACCOUNT</SL>
         <div style={{ background: theme.surface, borderRadius: 14, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
           {[
-            { label: 'Life stage', value: lifeStage || '—' },
-            { label: 'Goal', value: goal || '—' },
             { label: 'Member since', value: 'April 2025' },
-            { label: 'Plan', value: 'Free' },
+            { label: 'Plan', value: 'Free', accent: true },
           ].map((r, i, arr) => (
             <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
               borderBottom: i < arr.length - 1 ? `1px solid ${theme.border}` : 'none', background: theme.surface }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: theme.text }}>{r.label}</span>
-              <span style={{ fontSize: 12, color: r.label === 'Plan' ? theme.accent : theme.textMuted, fontWeight: r.label === 'Plan' ? 700 : 400 }}>{r.value}</span>
+              <span style={{ fontSize: 12, color: r.accent ? theme.accent : theme.textMuted, fontWeight: r.accent ? 700 : 400 }}>{r.value}</span>
             </div>
           ))}
         </div>

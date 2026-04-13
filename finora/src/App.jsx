@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useAuthStore, useThemeStore, useTransactionStore, useProfileStore } from './store'
 import { supabase, fetchTransactions, fetchUserProfile } from './lib/supabase'
 import { registerServiceWorker } from './lib/notifications'
@@ -34,10 +34,10 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { setUser, setSession } = useAuthStore()
+  const { setUser, setSession, user } = useAuthStore()
   const { theme } = useThemeStore()
   const { setTransactions } = useTransactionStore()
-  const { setProfile } = useProfileStore()
+  const { setProfile, setNewUser, isNewUser } = useProfileStore()
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-color', theme.accent)
@@ -45,21 +45,51 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
+    // Restore session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) { setUser(session.user); setSession(session); restoreData(session.user.id) }
+      if (session?.user) {
+        setUser(session.user)
+        setSession(session)
+        restoreData(session.user.id)
+      }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session?.user) { setUser(session.user); setSession(session); restoreData(session.user.id) }
-      else { setUser(null); setSession(null) }
+
+    // Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user)
+        setSession(session)
+        await restoreData(session.user.id)
+      } else {
+        setUser(null)
+        setSession(null)
+      }
     })
-    return () => subscription.unsubscribe()
+
+    // Cross-device sync: refetch when user returns to tab
+    const handleFocus = () => {
+      if (user?.id) restoreData(user.id)
+    }
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && user?.id) restoreData(user.id)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [])
 
   async function restoreData(userId) {
+    // Pull latest from Supabase — ensures cross-device sync
     const { data: txns } = await fetchTransactions(userId)
     if (txns?.length) setTransactions(txns)
+
     const { data: profile } = await fetchUserProfile(userId)
     if (profile) {
+      const isNew = !profile.city && !profile.life_stage && !profile.goal
+      setNewUser(isNew)
       setProfile({
         city: profile.city || '',
         budget: profile.monthly_budget || 0,
@@ -71,6 +101,9 @@ export default function App() {
         whatsapp: profile.whatsapp_number || '',
         name: profile.name || '',
       })
+    } else {
+      // No profile in DB yet = new user
+      setNewUser(true)
     }
   }
 

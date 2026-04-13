@@ -16,8 +16,8 @@ export const useThemeStore = create(persist(
 export const useAuthStore = create(persist(
   (set) => ({
     user: null, session: null,
-    setUser: (user) => set({ user }),
-    setSession: (session) => set({ session }),
+    setUser: (u) => set({ user: u }),
+    setSession: (s) => set({ session: s }),
     logout: () => set({ user: null, session: null })
   }),
   { name: 'finora-auth' }
@@ -43,6 +43,11 @@ export const useTransactionStore = create(persist(
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
       })
     },
+    getWeekTransactions: () => {
+      const now = new Date()
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      return get().transactions.filter(t => new Date(t.date) >= weekAgo)
+    },
     getTotalSpent: () => get().getMonthTransactions().filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0),
     getTotalIncome: () => get().getMonthTransactions().filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0),
     getCategoryBreakdown: () => {
@@ -59,20 +64,25 @@ export const useTransactionStore = create(persist(
 export const useMarketStore = create((set, get) => ({
   data: null, lastFetched: null,
   setData: (data) => set({ data, lastFetched: Date.now() }),
-  isStale: () => !get().lastFetched || Date.now() - get().lastFetched > 5 * 60 * 1000 // 5 min for market data
+  isStale: () => !get().lastFetched || Date.now() - get().lastFetched > 5 * 60 * 1000
 }))
 
-export const useChatStore = create((set) => ({
-  messages: [], loading: false,
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  setLoading: (v) => set({ loading: v }),
-  clearChat: () => set({ messages: [] })
-}))
+// AI chat history persisted across sessions
+export const useChatStore = create(persist(
+  (set) => ({
+    messages: [],
+    loading: false,
+    addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+    setLoading: (v) => set({ loading: v }),
+    clearChat: () => set({ messages: [] })
+  }),
+  { name: 'finora-chat-history' }
+))
 
 export const useProfileStore = create(persist(
   (set) => ({
     city: '',
-    budget: 0,  // NO default — user must set this
+    budget: 0,
     cityGoldPremium: 40,
     lifeStage: '',
     goal: '',
@@ -81,7 +91,9 @@ export const useProfileStore = create(persist(
     whatsapp: '',
     name: '',
     customCategories: [],
+    isNewUser: true,
     setProfile: (data) => set((s) => ({ ...s, ...data })),
+    setNewUser: (v) => set({ isNewUser: v }),
     addCustomCategory: (cat) => set((s) => ({
       customCategories: [...s.customCategories.filter(c => c !== cat), cat]
     })),
