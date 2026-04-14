@@ -3,77 +3,87 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!url || !key) {
-  console.warn('Supabase env vars missing — running in demo mode')
-}
-
 export const supabase = createClient(
   url || 'https://placeholder.supabase.co',
-  key || 'placeholder'
+  key || 'placeholder',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    },
+    realtime: { params: { eventsPerSecond: 2 } }
+  }
 )
 
 export async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  return supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin }
+    options: { redirectTo: window.location.origin + '/dashboard' }
   })
-  return { data, error }
 }
 
 export async function signInWithEmail(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  return { data, error }
+  return supabase.auth.signInWithPassword({ email, password })
 }
 
 export async function signUpWithEmail(email, password, name) {
-  const { data, error } = await supabase.auth.signUp({
+  return supabase.auth.signUp({
     email, password,
     options: { data: { full_name: name } }
   })
-  return { data, error }
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut({ scope: 'global' })
+  // Clear localStorage manually as backup
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('finora-') || k.startsWith('sb-')) localStorage.removeItem(k)
+    })
+  } catch {}
   return { error }
 }
 
-export async function getUser() {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
-
 export async function fetchTransactions(userId) {
-  const { data, error } = await supabase
+  return supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .order('date', { ascending: false })
-    .limit(100)
-  return { data, error }
+    .limit(500)
 }
 
 export async function insertTransaction(txn) {
-  const { data, error } = await supabase
-    .from('transactions')
-    .insert([txn])
-    .select()
-  return { data, error }
+  return supabase.from('transactions').insert([txn]).select()
 }
 
 export async function fetchUserProfile(userId) {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single()
-  return { data, error }
+  return supabase.from('users').select('*').eq('id', userId).single()
 }
 
 export async function upsertUserProfile(profile) {
-  const { data, error } = await supabase
-    .from('users')
-    .upsert([profile])
-    .select()
-  return { data, error }
+  return supabase.from('users').upsert([profile], { onConflict: 'id' }).select()
+}
+
+export async function deleteUserAccount(userId) {
+  // Delete all user data first
+  await supabase.from('transactions').delete().eq('user_id', userId)
+  await supabase.from('ai_conversations').delete().eq('user_id', userId)
+  await supabase.from('tips_log').delete().eq('user_id', userId)
+  await supabase.from('users').delete().eq('id', userId)
+  // Sign out after deletion
+  await supabase.auth.signOut()
+}
+
+export function subscribeToTransactions(userId, callback) {
+  return supabase
+    .channel(`transactions-${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'transactions',
+      filter: `user_id=eq.${userId}`
+    }, callback)
+    .subscribe()
 }

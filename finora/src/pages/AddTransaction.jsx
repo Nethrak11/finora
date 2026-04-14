@@ -100,7 +100,7 @@ export default function AddTransaction() {
     sendLocalNotification('Transaction saved ✅', `₹${parseFloat(amount).toLocaleString('en-IN')} — ${category}`)
     setSaving(false)
     setSuccess(true)
-    setTimeout(() => navigate('/dashboard'), 900)
+    setTimeout(() => navigate('/dashboard'), 1200)
   }
 
   const addCat = () => {

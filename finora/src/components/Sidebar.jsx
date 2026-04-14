@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useThemeStore } from '../store'
+import { FinoraSidebarIcon } from './FinoraLogo'
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.9"/><rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/></svg> },
@@ -8,7 +9,6 @@ const navItems = [
   { path: '/transactions', label: 'History', icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="2" rx="1" fill="currentColor" opacity="0.9"/><rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" opacity="0.6"/><rect x="3" y="14" width="10" height="2" rx="1" fill="currentColor" opacity="0.4"/></svg> },
   { path: '/add', label: 'Add', icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/><line x1="10" y1="6" x2="10" y2="14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><line x1="6" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
 ]
-
 const bottomItems = [
   { path: '/profile', label: 'Profile', icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.4"/><path d="M3 17c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none"/></svg> },
   { path: '/settings', label: 'Settings', icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg> },
@@ -38,16 +38,11 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar" style={{ background: theme.sidebar }}>
-      <div style={{ width: 42, height: 42, background: theme.accent, borderRadius: 12,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, cursor: 'pointer' }}
+      <div style={{ width: 42, height: 42, background: '#ffffff', borderRadius: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, cursor: 'pointer',
+        padding: 4 }}
         onClick={() => navigate('/dashboard')}>
-        <svg width="26" height="26" viewBox="0 0 62 62" fill="none">
-          <rect x="6" y="40" width="12" height="16" rx="2.5" fill="rgba(255,255,255,0.4)"/>
-          <rect x="22" y="30" width="12" height="26" rx="2.5" fill="rgba(255,255,255,0.65)"/>
-          <rect x="38" y="18" width="12" height="38" rx="2.5" fill="rgba(255,255,255,0.9)"/>
-          <line x1="8" y1="38" x2="46" y2="14" stroke="white" strokeWidth="2.8" strokeLinecap="round"/>
-          <polyline points="38,11 49,12 48,22" fill="none" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <FinoraSidebarIcon size={34} />
       </div>
       {navItems.map(item => <Item key={item.path} {...item} />)}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
